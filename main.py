@@ -9,6 +9,10 @@ from pydantic import BaseModel
 import requests
 from pymongo import MongoClient
 from fastapi.encoders import jsonable_encoder
+from datetime import datetime
+
+currenttime = datetime.now()
+capturelocation = "Zone A : Camera 1"
 
 app = FastAPI()
 
@@ -41,14 +45,71 @@ app.add_middleware(
 
 @app.get("/")
 def index():
-    return {"ML API": "Server has started"}
+    return {
+        "title": "Human Detection API",
+        "description": "An API for Human recognition using a pre-trained Keras model.",
+        "endpoints": [
+            {
+                "path": "/mldetector",
+                "description": "Detects whether an image contains a human or not using a pre-trained Keras model.",
+                "method": "POST",
+                "parameters": {
+                    "imagedata": "str (required) - Base64-encoded image data."
+                }
+            },
+            {
+                "path": "/insert_into_human_images/",
+                "description": "Inserts a human image into the 'human_images' collection in the MongoDB database.",
+                "method": "POST",
+                "parameters": {
+                    "imagedata": "str (required) - Base64-encoded image data."
+                }
+            },
+            {
+                "path": "/insert_into_not_human_images/",
+                "description": "Inserts a non-human image into the 'not_human_images' collection in the MongoDB database.",
+                "method": "POST",
+                "parameters": {
+                    "imagedata": "str (required) - Base64-encoded image data."
+                }
+            },
+            {
+                "path": "/alert/human/{imagedata}/{capturetime}/{capturelocation}",
+                "description": "Sends an email alert when a human is detected in the image.",
+                "method": "POST",
+                "parameters": {
+                    "imagedata": "str (required) - Base64-encoded image data."
+                }
+            },
+            {
+                "path": "/alert/nohuman/{imagedata}",
+                "description": "Sends an email alert when no human is detected in the image.",
+                "method": "POST",
+                "parameters": {
+                    "imagedata": "str (required) - Base64-encoded image data."
+                }
+            }
+        ],
+        "note": "Before using the 'mldetector' endpoint, make sure to have the Keras model 'keras_model.h5' and the 'labels.txt' file in the same directory as the FastAPI application."
+    }
 
 
 @app.post("/alert/human/{imagedata}")
 def alert_human(imagedata: str):
     email_data = {
-        "subject": "Human Detected",
-        "body": "This is a test email body.",
+        "subject": f"Subject: ALERT - Human Detected in Forest {capturelocation}",
+        "body": f'''Dear Forest Watch Team,
+
+This is to alert you about a recent detection of a human presence in the forest. The detection was made at {currenttime.strftime("%H:%M:%S , %Y-%m-%d")} at the following location: {capturelocation}.
+
+An image from the camera at the time of detection is attached below for reference.
+
+Please take appropriate actions and necessary precautions to ensure the safety and security of the forest area.
+
+Best regards,
+Forest Watch AI
+
+[Note: This email is generated automatically by the Forest Watch AI API. Please do not reply to this email. For any queries or concerns, contact the Forest Watch Team.]''',
         "imagedata": imagedata
     }
     response = requests.post(
@@ -73,13 +134,17 @@ def alert_no_human(imagedata: str):
 @app.post("/insert_into_human_images/", response_model=dict)
 def insert_into_human_images(imagedata):
     inserted_data = collection1.insert_one(
-        jsonable_encoder({"imagedata": imagedata}))
+        jsonable_encoder({"imagedata": imagedata,
+                          "capturetime": currenttime.strftime("%H:%M:%S , %Y-%m-%d"),
+                          "capturelocation": capturelocation}))
 
 
 @app.post("/insert_into_not_human_images/")
 def insert_into_not_human_images(imagedata):
     inserted_data = collection2.insert_one(
-        jsonable_encoder({"imagedata": imagedata}))
+        jsonable_encoder({"imagedata": imagedata,
+                          "capturetime": currenttime.strftime("%H:%M:%S , %Y-%m-%d"),
+                          "capturelocation": capturelocation}))
 
 
 @app.post("/mldetector")
@@ -130,6 +195,6 @@ def mldetector(imagedata: ImageData):
         alert_human(image_data)
     elif class_name[2:].strip() == 'Not Human':
         insert_into_not_human_images(image_data)
-        alert_no_human(image_data)
+        # alert_no_human(image_data)
 
     return class_name[2:].strip()
