@@ -55,7 +55,7 @@ uvicorn main:app --reload
 
  We deploy the Node.js and FastAPI files to Render. Follow these steps:
 
-Deploying Node.js and FastAPI to Render:
+Deploying FastAPI to Render:
 
 1. Sign up or log in to Render.
 2. Create a new service and configure it for your FastAPI application.
