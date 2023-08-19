@@ -19,8 +19,13 @@ Before you begin, make sure you have the following prerequisites installed:
 
 Python packages to install using Python Package Manager (pip):
 - fastapi
+- keras
+- numpy
+- Pillow
 - pymongo
+- requests
 - uvicorn
+- tensorflow
 - python-multiplier
 ```
 pip install fastapi keras numpy Pillow pymongo requests uvicorn tensorflow python-multiplier
